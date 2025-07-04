@@ -1,0 +1,136 @@
+# ---
+# - name: Deploy Spring Boot JAR to Ubuntu EC2
+#   hosts: all
+#   become: yes
+#   vars:
+#     jar_file: spring-petclinic-3.5.0-SNAPSHOT.jar
+#     remote_path: /home/ubuntu/
+#     s3_bucket: testingbucketforjenkins12345
+
+#   tasks:
+#     - name: Update APT package index
+#       apt:
+#         update_cache: yes
+
+#     - name: Install Java 17
+#       apt:
+#         name: openjdk-17-jdk
+#         state: present
+
+#     - name: Install Nginx
+#       apt:
+#         name: nginx
+#         state: present
+
+#     - name: Ensure Nginx is started and enabled
+#       service:
+#         name: nginx
+#         state: started
+#         enabled: true
+
+#     - name: Install pip3
+#       apt:
+#         name: python3-pip
+#         state: present
+
+#     - name: Install boto3 and botocore (for S3 access)
+#       pip:
+#         name:
+#           - boto3
+#           - botocore
+
+#     - name: Download JAR from S3 to EC2
+#       amazon.aws.aws_s3:
+#         bucket: "{{ s3_bucket }}"
+#         object: "{{ jar_file }}"
+#         dest: "{{ remote_path }}{{ jar_file }}"
+#         mode: get
+#         overwrite: true
+
+#     - name: Kill existing Spring Boot app (if any)
+#       shell: pkill -f "{{ jar_file }}"
+#       ignore_errors: yes
+
+#     - name: Run Spring Boot app in background (uses application.properties port 8081)
+#       shell: "nohup java -jar {{ remote_path }}{{ jar_file }} > /dev/null 2>&1 &"
+
+#     - name: Configure Nginx as reverse proxy to port 8081
+#       copy:
+#         dest: /etc/nginx/sites-available/springboot
+#         content: |
+#           server {
+#               listen 80;
+#               server_name localhost;
+
+#               location / {
+#                   proxy_pass http://localhost:8081;
+#                   proxy_set_header Host $host;
+#                   proxy_set_header X-Real-IP $remote_addr;
+#                   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+#                   proxy_set_header X-Forwarded-Proto $scheme;
+#               }
+#           }
+
+#     - name: Enable springboot Nginx config
+#       file:
+#         src: /etc/nginx/sites-available/springboot
+#         dest: /etc/nginx/sites-enabled/springboot
+#         state: link
+#         force: yes
+
+#     - name: Remove default Nginx config (if exists)
+#       file:
+#         path: /etc/nginx/sites-enabled/default
+#         state: absent
+#       ignore_errors: yes
+
+#     - name: Reload Nginx to apply new config
+#       service:
+#         name: nginx
+#         state: reloaded
+---
+- name: Deploy Spring Boot JAR to Ubuntu EC2 without Nginx
+  hosts: all
+  become: yes
+  vars:
+    jar_file: spring-petclinic-3.5.0-SNAPSHOT.jar
+    remote_path: /home/ubuntu/
+    s3_bucket: testingbucketforjenkins12345
+
+  tasks:
+    - name: Update APT package index
+      apt:
+        update_cache: yes
+
+    - name: Install Java 17
+      apt:
+        name: openjdk-17-jdk
+        state: present
+
+    - name: Install pip3
+      apt:
+        name: python3-pip
+        state: present
+
+    - name: Install boto3 and botocore (using apt)
+      apt:
+        name:
+          - python3-boto3
+          - python3-botocore
+        state: present
+
+
+    - name: Download JAR from S3 to EC2
+      amazon.aws.aws_s3:
+        bucket: "{{ s3_bucket }}"
+        object: "{{ jar_file }}"
+        dest: "{{ remote_path }}{{ jar_file }}"
+        mode: get
+        overwrite: true
+
+    - name: Kill existing Spring Boot app (if any)
+      shell: pkill -f "{{ jar_file }}"
+      ignore_errors: yes
+
+    - name: Run Spring Boot app in background on port 8081
+      shell: "nohup java -jar {{ remote_path }}{{ jar_file }} > /dev/null 2>&1 &"
