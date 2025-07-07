@@ -1,6 +1,6 @@
 ## Stage1 creating a jar file 
 
-FROM maven:3.9.10-eclipse-temurin-11 AS builder
+FROM maven:3.9.10-eclipse-temurin-17 AS builder
 WORKDIR /app
 COPY . .
 RUN mvn package -DskipTests
